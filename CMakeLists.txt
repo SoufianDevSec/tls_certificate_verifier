@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 #
 # 1. '03': enable alle optimizations
 # 2. '-Wall': enable all warnings
-set(CMAKE_CXX_FLAGS "-03 -Wall")
+set(CMAKE_CXX_FLAGS "-O3 -Wall")
 
 # specify the non-header source files that should be compiled
 file(GLOB CPP_SOURCE
