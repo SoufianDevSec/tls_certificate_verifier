@@ -28,7 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     outputArea->setReadOnly(true);
     layout->addWidget(outputArea);
 
-    this->resize(600, 400);
+    this->resize(800, 600);
 
 }
 
