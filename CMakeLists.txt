@@ -17,6 +17,11 @@ set(CMAKE_PREFIX_PATH "/usr/lib/x86_64-linux-gnu/cmake/Qt5")
 # Find Qt5 and link libraries
 find_package(Qt5 COMPONENTS Widgets Core Gui REQUIRED)
 
+# Sodium
+find_package(sodium REQUIRED)
+set(CMAKE_PREFIX_PATH "/usr/lib/x86_64-linux-gnu/cmake/sodium")
+
+
 # Specify the non-header source files that should be compiled
 file(GLOB CPP_SOURCE "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/*/*.cpp")
 
@@ -28,6 +33,10 @@ add_executable(main ${CPP_SOURCE})
 
 # Link the Qt libraries
 target_link_libraries(main Qt5::Widgets Qt5::Core Qt5::Gui)
+
+
+target_link_libraries(main sodium)
+
 
 # Find and link OpenSSL libraries
 find_package(OpenSSL REQUIRED)
