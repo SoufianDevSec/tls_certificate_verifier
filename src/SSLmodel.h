@@ -16,6 +16,9 @@
 #include <cstring>  // For memset
 #include <ctime>    // For std::time()
 #include <sodium.h>
+#include <sstream>
+#include <iomanip>
+#include <cstdint>
 #include <QDebug>
 #include <QtCore/QDebug>
 #include <QtCore/QByteArray>
@@ -29,11 +32,19 @@ public:
     explicit SSLModel(QObject *parent = nullptr);
     std::string performSSLConnection(const std::string &url);
 
+    std::map<uint8_t, std::string> HandshakeTypeMap = {
+        {0x02, "Server Hello"}};
+
     std::map<uint8_t, std::string> contentTypeMap = {
         {0x14, "Change Cipher Spec"},
         {0x15, "Alert"},
         {0x16, "Handshake"},
         {0x17, "Application Data"}};
+
+    std::map<uint16_t ,std::string > cipherMap  = {
+            {0x1301, "TLS_AES_128_GCM_SHA256"},
+            {0xc02f, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}
+    };
 
     std::map<uint16_t, std::string> versionMap = {
         {0x0301, "TLS 1.0"},

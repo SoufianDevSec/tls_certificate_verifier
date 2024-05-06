@@ -60,7 +60,7 @@ std::string SSLModel::performSSLConnection(const std::string &url)
 
     // Read response from server
     std::vector<unsigned char> buffer(4096); // Adjust buffer size as needed
-   
+
     size_t bytes_received = recv(sockfd, buffer.data(), buffer.size(), 0);
     if (bytes_received < 0)
     {
@@ -241,7 +241,7 @@ std::vector<unsigned char> SSLModel::createClientHelloV1_3(const std::string &ho
     clientHello.insert(clientHello.end(), client_publickey, client_publickey + crypto_kx_PUBLICKEYBYTES);
 
     QByteArray keyArray(reinterpret_cast<const char *>(client_publickey), crypto_kx_PUBLICKEYBYTES);
-    qDebug().noquote() << keyArray.toHex(':'); 
+    qDebug().noquote() << keyArray.toHex(':');
 
     // Second Key Share Entry: secp256r1
     clientHello.push_back(0x00); // Group: secp256r1 (0x0017) MSB
@@ -454,6 +454,16 @@ std::vector<unsigned char> SSLModel::createClientHelloV1_2(const std::string &ho
 }
 
 
+// Function to convert bytes to a hexadecimal string for display
+std::string bytesToHexString(const uint8_t* bytes, size_t length) {
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    for (size_t i = 0; i < length; ++i) {
+        ss << std::setw(2) << static_cast<unsigned>(bytes[i]);
+    }
+    return ss.str();
+}
+
 void  SSLModel::parseTLSRecord(const std::vector<uint8_t>& buffer, size_t bytes_received) {
     if (bytes_received <= 0) {
         // Handle error or closed connection
@@ -470,18 +480,70 @@ void  SSLModel::parseTLSRecord(const std::vector<uint8_t>& buffer, size_t bytes_
     uint8_t contentType = buffer[index++];
     uint16_t version = (buffer[index] << 8) | buffer[index + 1];
     index += 2;
-    uint16_t length = (buffer[index] << 8) | buffer[index + 1];
+    uint16_t FullLength = (buffer[index] << 8) | buffer[index + 1];
     index += 2;
 
-    std::cout << "Content Type: " << (contentTypeMap.count(contentType) ? contentTypeMap[contentType] : "Unknown") << std::endl;
-    std::cout << "Version: " << (versionMap.count(version) ? versionMap[version] : "Unknown Version") << std::endl;
-    std::cout << "Length: " << length << std::endl;
-
     // Check if the entire payload has been received based on the length field
-    if (bytes_received < index + length) {
+    if (bytes_received < index + FullLength) {
         std::cerr << "Incomplete TLS record payload\n";
         return;
     }
 
     // Proceed to parse the payload based on the content type
+    // value = (byte[0] << 8*(n-1)) | (byte[1] << 8*(n-2)) | ... | byte[n-1];
+
+    uint8_t handshakeType = buffer[index++];
+    uint32_t lengthServerHello =  (buffer[index] << 16 ) | (buffer[index + 1] << 8) | (buffer[index + 2]);
+    index += 3;
+    uint16_t newVersion = (buffer[index] << 8) | (buffer[index + 1]);
+    index += 2;
+
+
+    // Now extract the 32-byte random value
+    const size_t randomSize = 32; // The length of the random value field
+
+    uint8_t randomBytes[randomSize];
+    for (size_t i = 0; i < randomSize; ++i) {
+        randomBytes[i] = buffer[index + i];
+    }
+    std::string randomHexString = bytesToHexString(randomBytes, randomSize);
+
+    index += 32; // Move the index past the random field
+
+    uint8_t sessionIdLength = buffer[index++];
+
+    std::string sessionIdHexString;
+    uint16_t  chosenCipherSuite;
+    if (sessionIdLength != 0) {
+        uint8_t sessionBytes[randomSize];
+        for (size_t i = 0; i < randomSize; ++i) {
+            sessionBytes[i] = buffer[index + i];
+        }
+
+        sessionIdHexString = bytesToHexString(sessionBytes, randomSize);
+        index += 32;
+
+        chosenCipherSuite = (buffer[index] << 8) | (buffer[index + 1]);
+        index += 2;
+    } else{
+        chosenCipherSuite = (buffer[index] << 8) | (buffer[index + 1]);
+        index += 2;
+    }
+
+
+
+
+    std::cout << "Content Type: " << (contentTypeMap.count(contentType) ? contentTypeMap[contentType] : "Unknown") << std::endl;
+    std::cout << "Version: " << (versionMap.count(version) ? versionMap[version] : "Unknown Version") << std::endl;
+    std::cout << "FullLength: " << FullLength << std::endl;
+    std::cout << "Handshake Type: " << (HandshakeTypeMap.count(handshakeType) ? HandshakeTypeMap[handshakeType] : "Unknown") << std::endl;
+    std::cout << "lengthServerHello: " << lengthServerHello << std::endl;
+    std::cout << "newVersion: " << (versionMap.count(newVersion) ? versionMap[newVersion] : "Unknown Version") << std::endl;
+    std::cout << "Random value: " << randomHexString << std::endl;
+    std::cout << "Session ID Length: " << static_cast<int>(sessionIdLength) << std::endl;
+    std::cout << "Session ID Value: " << sessionIdHexString << std::endl;
+    std::cout << "Server Cipher suite: " << (cipherMap.count(chosenCipherSuite) ? cipherMap[chosenCipherSuite] : "unknown") << std::endl;
+
 }
+
+
